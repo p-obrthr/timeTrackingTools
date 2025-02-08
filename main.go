@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 const (
@@ -72,6 +73,14 @@ type model struct {
 	Frames   int
 	progress progress.Model
 	Loaded   bool
+}
+
+type TimeLog struct {
+	id    int
+	day   int
+	month int
+	year  int
+	kind  int
 }
 
 func (m model) Init() tea.Cmd {
@@ -169,6 +178,20 @@ func main() {
 	l.Styles.PaginationStyle = paginationStyle
 
 	m := model{list: l, progress: progress.New(progress.WithDefaultGradient())}
+
+	c, err := InitDb()
+	if err != nil {
+		fmt.Println("Error open db:", err)
+		os.Exit(1)
+	}
+	timeLog := TimeLog{
+		day:   1,
+		month: 1,
+		year:  1,
+		kind:  1,
+	}
+	fmt.Println(c.Insert(timeLog))
+	fmt.Println(c.GetTimeLog(1))
 
 	if _, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Println("Error running program:", err)
