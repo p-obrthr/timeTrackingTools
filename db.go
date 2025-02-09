@@ -2,6 +2,8 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
+	"time"
 )
 
 type TimeLogDb struct {
@@ -16,6 +18,8 @@ const createDb string = `
 		day INTEGER NOT NULL,
 		month INTEGER NOT NULL,
 		year INTEGER NOT NULL,
+		week TEXT NOT NULL,
+		timestamp TEXT NOT NULL,
 		kind INTEGER NOT NULL
 	  );`
 
@@ -32,8 +36,8 @@ func InitDb() (*TimeLogDb, error) {
 	}, nil
 }
 
-func (c *TimeLogDb) Insert(timelog TimeLog) (int, error) {
-	res, err := c.db.Exec("INSERT INTO timelogs (day, month, year, entry_type) VALUES(?,?,?,?);", timelog.day, timelog.month, timelog.year, timelog.kind)
+func (db *TimeLogDb) Insert(timelog TimeLog) (int, error) {
+	res, err := db.db.Exec("INSERT INTO timelogs (day, month, year, week, timestamp, kind) VALUES(?,?,?,?,?,?);", timelog.day, timelog.month, timelog.year, timelog.week, timelog.timestamp, timelog.kind)
 	if err != nil {
 		return 0, err
 	}
@@ -45,14 +49,81 @@ func (c *TimeLogDb) Insert(timelog TimeLog) (int, error) {
 	return int(id), nil
 }
 
-func (c *TimeLogDb) GetTimeLog(id int) (TimeLog, error) {
+func (db *TimeLogDb) InsertDummyData() error {
+	now := time.Now()
+	year := now.Year()
 
-	row := c.db.QueryRow("SELECT * FROM timelogs WHERE id=?", id)
+	currentWeek := GetCalendarWeek()
+	weeks := []int{currentWeek, currentWeek - 1, currentWeek - 2}
+
+	for _, week := range weeks {
+		for i := 0; i < week; i++ {
+			timestamp := fmt.Sprintf("%02d:%02d", 0, 0)
+
+			kind := 1
+
+			timelog := TimeLog{
+				day:       i + 1,
+				month:     int(now.Month()),
+				year:      year,
+				week:      week,
+				timestamp: timestamp,
+				kind:      kind,
+			}
+
+			_, err := db.Insert(timelog)
+			if err != nil {
+				return fmt.Errorf("err: %v", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (db *TimeLogDb) GetTimeLog(id int) (TimeLog, error) {
+	row := db.db.QueryRow("SELECT * FROM timelogs WHERE id=?", id)
 
 	timeLog := TimeLog{}
-	var err error
-	if err = row.Scan(&timeLog.id, &timeLog.day, &timeLog.month, &timeLog.year, &timeLog.kind); err == sql.ErrNoRows {
+	if err := row.Scan(&timeLog.id, &timeLog.day, &timeLog.month, &timeLog.year, &timeLog.kind); err == sql.ErrNoRows {
 		return TimeLog{}, err
 	}
-	return timeLog, err
+	return timeLog, nil
+}
+
+func (db *TimeLogDb) GetAllTimeLogs() ([]TimeLog, error) {
+	rows, err := db.db.Query("SELECT * FROM timelogs;")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return db.scanRows(rows)
+}
+
+func (db *TimeLogDb) GetTimeLogsByWeek(week int) ([]TimeLog, error) {
+	rows, err := db.db.Query("SELECT * FROM timelogs WHERE week=?", week)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return db.scanRows(rows)
+}
+
+func (db *TimeLogDb) scanRows(rows *sql.Rows) ([]TimeLog, error) {
+	var timeLogs []TimeLog
+	for rows.Next() {
+		var timeLog TimeLog
+		if err := rows.Scan(&timeLog.id, &timeLog.day, &timeLog.month, &timeLog.year, &timeLog.week, &timeLog.timestamp, &timeLog.kind); err != nil {
+			return nil, err
+		}
+		timeLogs = append(timeLogs, timeLog)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return timeLogs, nil
 }
