@@ -13,7 +13,7 @@ type TimeLogDb struct {
 const file string = "timeTrackingTools.db"
 
 const createDb string = `
-	  CREATE TABLE IF NOT EXISTS timelogs (
+	CREATE TABLE IF NOT EXISTS timelogs (
 		id INTEGER NOT NULL PRIMARY KEY,
 		day INTEGER NOT NULL,
 		month INTEGER NOT NULL,
@@ -21,7 +21,7 @@ const createDb string = `
 		week TEXT NOT NULL,
 		timestamp TEXT NOT NULL,
 		kind INTEGER NOT NULL
-	  );`
+	);`
 
 func InitDb() (*TimeLogDb, error) {
 	db, err := sql.Open("sqlite3", file)
@@ -31,9 +31,21 @@ func InitDb() (*TimeLogDb, error) {
 	if _, err := db.Exec(createDb); err != nil {
 		return nil, err
 	}
-	return &TimeLogDb{
-		db: db,
-	}, nil
+
+	timeLogDb := &TimeLogDb{db: db}
+
+	all, err := timeLogDb.GetAllTimeLogs()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(all) == 0 {
+		if err := timeLogDb.InsertDummyData(); err != nil {
+			return nil, err
+		}
+	}
+
+	return timeLogDb, nil
 }
 
 func (db *TimeLogDb) Insert(timelog TimeLog) (int, error) {
