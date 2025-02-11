@@ -148,7 +148,7 @@ func main() {
 
 	var tabLogs [][]TimeLog
 
-	currentWeek := GetCalendarWeek()
+	currentWeek := GetCalendarWeekNow()
 
 	for i := 0; i < 3; i++ {
 		week := currentWeek - i

@@ -1,48 +1,36 @@
 package main
 
 import (
-	"fmt"
 	"time"
 )
 
 type TimeLog struct {
-	id        int
-	day       int
-	month     int
-	year      int
-	week      int
-	timestamp string
-	kind      int
+	Id        int
+	Timestamp time.Time
+	Week      int
+	Kind      int
 }
 
-func NewTimeLog(day int, month int, year int, kind int) *TimeLog {
-	week := GetCalendarWeek()
+func NewTimeLog(timestamp time.Time, kind int) *TimeLog {
+	timestamp = time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), timestamp.Hour(), timestamp.Minute(), 0, 0, time.UTC)
+
+	week := GetCalendarWeek(timestamp)
 	return &TimeLog{
-		day:   day,
-		month: month,
-		year:  year,
-		week:  week,
-		kind:  kind,
+		Timestamp: timestamp,
+		Week:      week,
+		Kind:      kind,
 	}
 }
 
 func NewTimeLogNow(kind int) *TimeLog {
 	now := time.Now()
-	week := GetCalendarWeek()
-	timestamp := fmt.Sprintf("%02d:%02d", now.Hour(), now.Minute())
+	week := GetCalendarWeek(now)
+
+	timestamp := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), 0, 0, time.UTC)
 
 	return &TimeLog{
-		day:       now.Day(),
-		month:     int(now.Month()),
-		year:      now.Year(),
-		week:      week,
-		kind:      kind,
-		timestamp: timestamp,
+		Week:      week,
+		Kind:      kind,
+		Timestamp: timestamp,
 	}
-}
-
-func GetCalendarWeek() int {
-	now := time.Now()
-	_, week := now.ISOWeek()
-	return week
 }

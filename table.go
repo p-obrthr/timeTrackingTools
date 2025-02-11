@@ -13,12 +13,39 @@ func (m *model) ActualizeTable() {
 
 	rows := []table.Row{}
 
-	for _, timeLog := range m.tabLogs[m.activeTab] {
+	logs := m.tabLogs[m.activeTab]
+
+	for _, log := range logs {
+		exist := false
+		for _, r := range rows {
+			if r[0] == strconv.Itoa(log.Timestamp.Day()) && r[1] == strconv.Itoa(int(log.Timestamp.Month())) {
+				if log.Kind == 0 {
+					r[4] = log.Timestamp.Format("15:04")
+				}
+				if log.Kind == 1 {
+					r[5] = log.Timestamp.Format("15:04")
+				}
+				exist = true
+			}
+		}
+
+		if exist {
+			continue
+		}
 		str := table.Row{
-			strconv.Itoa(timeLog.day),
-			strconv.Itoa(timeLog.month),
-			strconv.Itoa(timeLog.year),
-			strconv.Itoa(timeLog.week),
+			strconv.Itoa(log.Timestamp.Day()),
+			strconv.Itoa(int(log.Timestamp.Month())),
+			strconv.Itoa(log.Timestamp.Year()),
+			strconv.Itoa(log.Week),
+			"",
+			"",
+		}
+
+		if log.Kind == 0 {
+			str[4] = log.Timestamp.Format("15:04")
+		}
+		if log.Kind == 1 {
+			str[5] = log.Timestamp.Format("15:04")
 		}
 		rows = append(rows, str)
 	}
@@ -28,6 +55,8 @@ func (m *model) ActualizeTable() {
 		{Title: "Month", Width: 6},
 		{Title: "Year", Width: 6},
 		{Title: "Week", Width: 6},
+		{Title: "In", Width: 6},
+		{Title: "Out", Width: 6},
 	}
 
 	t := table.New(

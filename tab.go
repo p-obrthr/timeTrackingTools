@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/charmbracelet/lipgloss"
 	"strings"
 )
@@ -31,7 +30,7 @@ func (m model) GetTabView() string {
 		}
 		style = style.Border(border)
 		// renderedTabs = append(renderedTabs, style.Render(t))
-		renderedTabs = append(renderedTabs, style.Width(15).Render(t))
+		renderedTabs = append(renderedTabs, style.Width(20).Render(t))
 	}
 
 	row := lipgloss.JoinHorizontal(lipgloss.Top, renderedTabs...)
@@ -42,12 +41,12 @@ func (m model) GetTabView() string {
 }
 
 func GetTabNames() []string {
-	currentWeek := GetCalendarWeek()
+	// currentWeek := GetCalendarWeekNow()
 
 	tabs := []string{
-		fmt.Sprintf("this week (%d)", currentWeek),
-		fmt.Sprintf("%d", currentWeek-1),
-		fmt.Sprintf("%d", currentWeek-2),
+		"7",
+		"6",
+		"5",
 	}
 
 	return tabs

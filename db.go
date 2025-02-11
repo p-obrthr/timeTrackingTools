@@ -15,11 +15,8 @@ const file string = "timeTrackingTools.db"
 const createDb string = `
 	CREATE TABLE IF NOT EXISTS timelogs (
 		id INTEGER NOT NULL PRIMARY KEY,
-		day INTEGER NOT NULL,
-		month INTEGER NOT NULL,
-		year INTEGER NOT NULL,
-		week TEXT NOT NULL,
 		timestamp TEXT NOT NULL,
+		week INTEGER NOT NULL,
 		kind INTEGER NOT NULL
 	);`
 
@@ -49,7 +46,9 @@ func InitDb() (*TimeLogDb, error) {
 }
 
 func (db *TimeLogDb) Insert(timelog TimeLog) (int, error) {
-	res, err := db.db.Exec("INSERT INTO timelogs (day, month, year, week, timestamp, kind) VALUES(?,?,?,?,?,?);", timelog.day, timelog.month, timelog.year, timelog.week, timelog.timestamp, timelog.kind)
+
+	formattedTimestamp := timelog.Timestamp.Format("2006-01-02 15:04:05")
+	res, err := db.db.Exec("INSERT INTO timelogs (timestamp, week, kind) VALUES(?,?,?);", formattedTimestamp, timelog.Week, timelog.Kind)
 	if err != nil {
 		return 0, err
 	}
@@ -62,32 +61,19 @@ func (db *TimeLogDb) Insert(timelog TimeLog) (int, error) {
 }
 
 func (db *TimeLogDb) InsertDummyData() error {
-	now := time.Now()
-	year := now.Year()
+	timelogs := []TimeLog{
+		*NewTimeLog(time.Date(2025, 2, 10, 12, 0, 0, 0, time.Local), 0),
+		*NewTimeLog(time.Date(2025, 2, 10, 14, 0, 0, 0, time.Local), 1),
+		*NewTimeLog(time.Date(2025, 2, 9, 12, 0, 0, 0, time.Local), 0),
+		*NewTimeLog(time.Date(2025, 2, 1, 12, 0, 0, 0, time.Local), 0),
+	}
 
-	currentWeek := GetCalendarWeek()
-	weeks := []int{currentWeek, currentWeek - 1, currentWeek - 2}
-
-	for _, week := range weeks {
-		for i := 0; i < week; i++ {
-			timestamp := fmt.Sprintf("%02d:%02d", 0, 0)
-
-			kind := 1
-
-			timelog := TimeLog{
-				day:       i + 1,
-				month:     int(now.Month()),
-				year:      year,
-				week:      week,
-				timestamp: timestamp,
-				kind:      kind,
-			}
-
-			_, err := db.Insert(timelog)
-			if err != nil {
-				return fmt.Errorf("err: %v", err)
-			}
+	for _, timelog := range timelogs {
+		_, err := db.Insert(timelog)
+		if err != nil {
+			return fmt.Errorf("err: %v", err)
 		}
+
 	}
 
 	return nil
@@ -97,7 +83,7 @@ func (db *TimeLogDb) GetTimeLog(id int) (TimeLog, error) {
 	row := db.db.QueryRow("SELECT * FROM timelogs WHERE id=?", id)
 
 	timeLog := TimeLog{}
-	if err := row.Scan(&timeLog.id, &timeLog.day, &timeLog.month, &timeLog.year, &timeLog.kind); err == sql.ErrNoRows {
+	if err := row.Scan(&timeLog.Id, &timeLog.Timestamp, &timeLog.Week, &timeLog.Kind); err == sql.ErrNoRows {
 		return TimeLog{}, err
 	}
 	return timeLog, nil
@@ -114,7 +100,7 @@ func (db *TimeLogDb) GetAllTimeLogs() ([]TimeLog, error) {
 }
 
 func (db *TimeLogDb) GetTimeLogsByWeek(week int) ([]TimeLog, error) {
-	rows, err := db.db.Query("SELECT * FROM timelogs WHERE week=?", week)
+	rows, err := db.db.Query("SELECT * FROM timelogs WHERE week=? ORDER BY timestamp ASC;", week)
 	if err != nil {
 		return nil, err
 	}
@@ -127,15 +113,20 @@ func (db *TimeLogDb) scanRows(rows *sql.Rows) ([]TimeLog, error) {
 	var timeLogs []TimeLog
 	for rows.Next() {
 		var timeLog TimeLog
-		if err := rows.Scan(&timeLog.id, &timeLog.day, &timeLog.month, &timeLog.year, &timeLog.week, &timeLog.timestamp, &timeLog.kind); err != nil {
+		var timestamp string
+
+		if err := rows.Scan(&timeLog.Id, &timestamp, &timeLog.Week, &timeLog.Kind); err != nil {
 			return nil, err
 		}
+
+		parsedTimestamp, _ := time.Parse("2006-01-02 15:04:05", timestamp)
+		timeLog.Timestamp = parsedTimestamp.UTC()
+
 		timeLogs = append(timeLogs, timeLog)
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-
 	return timeLogs, nil
 }
