@@ -1,12 +1,55 @@
-package main
+package view
 
 import (
 	"fmt"
-	"github.com/charmbracelet/bubbles/list"
-	tea "github.com/charmbracelet/bubbletea"
 	"io"
 	"strings"
+
+	"github.com/charmbracelet/bubbles/list"
+	tea "github.com/charmbracelet/bubbletea"
 )
+
+type StartView struct {
+	list   list.Model
+	choice string
+}
+
+func NewStartView() *StartView {
+	list := *NewList()
+	if list.Items() == nil {
+		fmt.Println("err empty list")
+	}
+	return &StartView{
+		list:   list,
+		choice: "TimeTracker",
+	}
+}
+
+func (v StartView) Render() string {
+	return "\n" + v.list.View()
+}
+
+func (v StartView) HandleKey(msg interface{}) (View, tea.Cmd) {
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		switch keyMsg.String() {
+		case "enter":
+			i, ok := v.list.SelectedItem().(item)
+			if ok {
+				v.choice = string(i)
+			}
+			if v.choice == "TimeTracker" {
+				return NewTimeTrackerView(), nil
+			} else {
+				return NewPomodoroView(), tickCmd()
+			}
+		case "esc":
+			return NewStartView(), nil
+		}
+	}
+	var cmd tea.Cmd
+	v.list, cmd = v.list.Update(msg)
+	return v, cmd
+}
 
 type item string
 
