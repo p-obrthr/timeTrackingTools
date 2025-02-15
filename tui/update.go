@@ -13,6 +13,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		newView, cmd := m.view.HandleKey(msg)
 		m.view = newView
 		return m, cmd
+	default:
+		newView, cmd := m.view.HandleKey(msg)
+		m.view = newView
+		return m, cmd
 	}
-	return m, nil
 }

@@ -40,7 +40,7 @@ func (v StartView) HandleKey(msg interface{}) (View, tea.Cmd) {
 			if v.choice == "TimeTracker" {
 				return NewTimeTrackerView(), nil
 			} else {
-				return NewPomodoroView(), tickCmd()
+				return NewPomodoroView(), NewPomodoroView().Init()
 			}
 		case "esc":
 			return NewStartView(), nil
